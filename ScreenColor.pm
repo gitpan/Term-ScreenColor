@@ -1,15 +1,16 @@
 # Term::ScreenColor -- screen positioning and output coloring module
 #
-# Copyright (c) 1999-2002 Rene Uittenbogaard. All Rights Reserved
+# Copyright (c) 1999-2003 Rene Uittenbogaard. All Rights Reserved
 #
 # This module is free software; you can redistribute it and/or modify it
 # under the same terms as Perl itself.
 
 package Term::ScreenColor;
 
-use Term::Screen;
+require Term::Screen;
+
 @ISA = qw(Term::Screen);
-$VERSION = 1.08;
+$VERSION = '1.09';
 
 # Most methods end in "$_[0]" so you can string things together, e.g.
 # $scr->at(2,3)->cyan()->puts("hi");
@@ -19,10 +20,11 @@ sub new {
     my $classname = ref($self) || $self;
     my $ob = new Term::Screen;
     # terminal types which support color (ugly solution, fix this)
-    $ob->{is_colorizable} = $ENV{'TERM'} =~ /(^linux$|color)/i; 
+    $ob->{is_colorizable} = $ENV{'TERM'} =~ /(^linux$|color|ansi)/i; 
     return bless $ob, $classname;
 }
 
+# I asked the author to include this in Term::Screen, it would fit better there.
 
 sub raw {
     eval { system qw(stty raw -echo); };     # turn on raw input
@@ -34,9 +36,43 @@ sub cooked {
     return $_[0];
 }
 
+sub color2esc {
+    # return color sequence
+    my $this = ref $_[0] ? shift() : { is_colorizable => 1 };
+    my $color = shift;
+    return '' unless $this->{is_colorizable};
+    $color =~ s/on\s+/on_/g;
+    $color =~ s/bold/ansibold/g;   # present in Term::Screen, not in %ATTRIBUTES
+    $color =~ s/reverse/inverse/g; # present in Term::Screen, not in %ATTRIBUTES
+    return "\e[", join (';', map { $ATTRIBUTES{$_} } split(/\s+|;/, $color)), 'm';
+}
+
 sub color {
-    my ($this, $code) = (shift, shift);
-    print "\e[${code}m" if $this->{is_colorizable};
+    # must be compatible with previous versions.
+    goto &putcolor;
+}
+
+sub putcolor { 
+    # print color sequence
+    my $this = ref $_[0] ? shift() : undef;
+    my $color = shift;
+    print $this ? $this->color2esc($color) : &color2esc($color);
+    return $this;
+}
+
+sub colored {
+    # return string wrapped in color sequence
+    my $this = ref $_[0] ? shift() : { is_colorizable => 1 };
+    my $color = shift;
+    return join('', @_) unless $this->{is_colorizable};
+    return join('', &color2esc($color), @_, "\e[0m");
+}
+
+sub putcolored {
+    # print string wrapped in color sequence
+    my $this = ref $_[0] ? shift() : undef;
+    my $color = shift;
+    print $this ? $this->colored($color, @_) : &colored($color, @_);
     return $this;
 }
 
@@ -52,7 +88,7 @@ sub colorizable {
 
 # initialisation
 
-my %ATTRIBUTES = (
+%ATTRIBUTES = (
   'clear'      => 0,  'black'      => 30,  'on_black'   => 40, 
   'reset'      => 0,  'red'        => 31,  'on_red'     => 41, 
   'ansibold'   => 1,  'green'      => 32,  'on_green'   => 42, 
@@ -73,6 +109,12 @@ foreach (keys %ATTRIBUTES) {
     );
 }
 
+# Add the values themselves as keys
+
+foreach (values %ATTRIBUTES) {
+	$ATTRIBUTES{$_} = $_;
+}
+
 1;
 
 =pod
@@ -90,15 +132,14 @@ color support.
 
    $scr = new Term::ScreenColor;
    $scr->at(2,0)->red()->on_yellow()->puts("Hello, Tau Ceti!");
+   $scr->putcolored('cyan bold on blue', 'Betelgeuse');
+   $scr->putcolored('1;36;44', 'Altair');
    $scr->raw();
 
 =head1 DESCRIPTION
 
 Term::ScreenColor adds ANSI coloring support, along with a few other useful
-methods, to the objects provided in Term::Screen. This provides an object
-class that combines the best of Term::Screen (i.e. the ability to string
-method calls together) with the best of Term::ANSIScreen (i.e. ANSI color
-support).
+methods, to the objects provided in Term::Screen.
 
 =head1 PUBLIC INTERFACE
 
@@ -139,6 +180,14 @@ called with no arguments) whether the terminal is believed to support ANSI
 color codes. If this is set to off (0), no ANSI codes will be output. This
 provides an easy way for turning on/off color.
 
+=item putcolored()
+
+Identical to puts(), but wraps its arguments in ANSI color sequences first,
+using its first argument as color specification. Example:
+
+   $scr->putcolored('cyan bold on blue', 'Betelgeuse');
+   $scr->putcolored('1;36;44', 'Altair');
+
 =back
 
 =head1 AUTHOR
@@ -154,7 +203,7 @@ Term::ScreenColor was based on:
 Originally by Mark Kaehny (kaehny@execpc.com), now maintained by Jonathan
 Stowe (jns@gellyfish.com)
 
-=item Term::ANSIColor-0.09
+=item Term::ANSIColor
 
 By Russ Allbery (rra@cs.stanford.edu) and Zenin (zenin@best.com)
 
@@ -162,6 +211,6 @@ By Russ Allbery (rra@cs.stanford.edu) and Zenin (zenin@best.com)
 
 =head1 SEE ALSO
 
-Term::Screen(3pm), Term::Cap(3pm), termcap(5), ncurses(3), stty(1)
+Term::Screen(3pm), Term::Cap(3pm), termcap(5), stty(1)
 
 =cut
