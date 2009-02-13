@@ -1,6 +1,6 @@
 # Term::ScreenColor -- screen positioning and output coloring module
 #
-# Copyright (c) 1999-2003 Rene Uittenbogaard. All Rights Reserved
+# Copyright (c) 1999-2009 Rene Uittenbogaard. All Rights Reserved
 #
 # This module is free software; you can redistribute it and/or modify it
 # under the same terms as Perl itself.
@@ -10,7 +10,7 @@ package Term::ScreenColor;
 require Term::Screen;
 
 @ISA = qw(Term::Screen);
-$VERSION = '1.09';
+$VERSION = '1.10';
 
 # Most methods end in "$_[0]" so you can string things together, e.g.
 # $scr->at(2,3)->cyan()->puts("hi");
@@ -25,6 +25,7 @@ sub new {
 }
 
 # I asked the author to include this in Term::Screen, it would fit better there.
+# unfortunately, he didn't respond yet.
 
 sub raw {
     eval { system qw(stty raw -echo); };     # turn on raw input
