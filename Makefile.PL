@@ -2,7 +2,8 @@
 
 use ExtUtils::MakeMaker;
 
-WriteMakefile(	NAME	  => 'Term::ScreenColor',
-		PREREQ_PM => { 'Term::Screen' => 1.03 },
-		VERSION	  => '1.10');
+WriteMakefile(	NAME		=> 'Term::ScreenColor',
+		VERSION_FROM	=> 'ScreenColor.pm',
+		PREREQ_PM	=> { 'Term::Screen' => 1.03 },
+	);
 
