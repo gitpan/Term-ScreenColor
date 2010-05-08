@@ -1,26 +1,407 @@
-# Term::ScreenColor -- screen positioning and output coloring module
+#!/usr/bin/env perl
 #
-# Copyright (c) 1999-2010 Rene Uittenbogaard. All Rights Reserved
+##########################################################################
 #
-# This module is free software; you can redistribute it and/or modify
-# it under the same terms as Perl itself.
+# Name:         Term::ScreenColor
+# Version:      1.13
+# Author:       Rene Uittenbogaard
+# Date:         2010-04-29
+# Usage:        require Term::ScreenColor;
+# Requires:     Term::Screen
+# Description:  Screen positioning and output coloring module
+#
+# Copyright:    (c) 1999-2010 Rene Uittenbogaard. All Rights Reserved.
+#               This module is free software; you can redistribute it
+#               and/or modify it under the same terms as Perl itself.
 
-########################################################################
+##########################################################################
+# Term::ScreenColor
+
+package Term::ScreenColor;
+
+use strict;
+
+our @ISA = qw(Term::Screen::Fixes);
+our $VERSION = '1.13';
+
+our %ATTRIBUTES = (
+  'clear'      => 0,
+  'reset'      => 0,
+  'ansibold'   => 1,   'noansibold'   => 22,  # 1=on, 22=off
+  'italic'     => 3,   'noitalic'     => 23,  # not widely supported
+  'underscore' => 4,   'nounderscore' => 24,
+  'blink'      => 5,   'noblink'      => 25,
+  'inverse'    => 7,   'noinverse'    => 27,
+  'concealed'  => 8,   'noconcealed'  => 28,
+
+  'black'      => 30,  'on_black'     => 40,
+  'red'        => 31,  'on_red'       => 41,
+  'green'      => 32,  'on_green'     => 42,
+  'yellow'     => 33,  'on_yellow'    => 43,
+  'blue'       => 34,  'on_blue'      => 44,
+  'magenta'    => 35,  'on_magenta'   => 45,
+  'cyan'       => 36,  'on_cyan'      => 46,
+  'white'      => 37,  'on_white'     => 47,
+);
+
+##########################################################################
+# start of manpage
+
+=pod
+
+=head1 NAME
+
+Term::ScreenColor - Term::Screen based screen positioning and coloring module
+
+=head1 SYNOPSIS
+
+A Term::Screen based screen positioning module with ANSI
+color support.
+
+   use Term::ScreenColor;
+
+   $scr = new Term::ScreenColor;
+   $scr->colorizable(1);
+   $scr->at(2,0)->red()->on_yellow()->puts("Hello, Tau Ceti!");
+   $scr->putcolored('cyan bold on blue', 'Betelgeuse');
+   $scr->putcolored('36;1;44', 'Altair');
+
+=head1 DESCRIPTION
+
+Term::ScreenColor adds ANSI coloring support, along with a few other useful
+methods, to those provided in Term::Screen.
+
+=head1 PUBLIC INTERFACE
+
+Most methods return the Term::ScreenColor object so you can string things
+together, I<e.g.>
+
+    $scr->at(2,3)->cyan()->on_white()->puts("hello");
+
+In addition to the methods described in Term::Screen(3pm),
+Term::ScreenColor offers the following methods:
+
+=over
+
+=item new()
+
+Creates a new Term::ScreenColor object. Note that the constructor
+of the inherited class Term::Screen homes the cursor and switches
+the terminal to raw input mode.
+
+=cut
+
+sub new {
+    my $this = shift;
+    my $classname = ref($this) || $this;
+    my $ob = Term::ScreenColor->SUPER::new();
+    # terminal types which support color (ugly solution, fix this)
+    $ob->{is_colorizable} = $ENV{'TERM'} =~ /(^linux$|color|ansi)/i;
+    return bless $ob, $classname;
+}
+
+=item colorizable()
+
+=item I<colorizable($boolean)>
+
+Returns (if called with no arguments) or sets (if called with one
+boolean argument) whether the terminal is believed to support ANSI
+color codes. If this is set to false, no ANSI codes will be printed
+or generated. This provides an easy way for turning color on/off.
+
+Note that the constructor above takes an initial guess at whether
+the terminal supports color (using the C<TERM> variable).
+
+=cut
+
+sub colorizable {
+    my ($this, $request) = (@_);
+    if (defined($request)) {
+        $this->{is_colorizable} = $request;
+        return $this;
+    } else {
+        return $this->{is_colorizable};
+    }
+}
+
+=item black()
+
+=item red()
+
+=item on_white()
+
+=item on_cyan()
+
+=item inverse()
+
+I<etc.>
+
+Prints an ANSI escape sequence for a specific color.
+
+The color names understood are:
+
+=for roff
+.de Vp \" hack to hide ascii table from manpage
+
+     ANSI color names:
+    -----------------------------------
+      0  clear
+      0  reset
+      1  ansibold     22  noansibold
+      3  italic       23  noitalic
+      4  underscore   24  nounderscore
+      5  blink        25  noblink
+      7  inverse      27  noinverse
+      8  concealed    28  noconcealed
+    -----------------------------------
+     30  black        40  on_black
+     31  red          41  on_red
+     32  green        42  on_green
+     33  yellow       43  on_yellow
+     34  blue         44  on_blue
+     35  magenta      45  on_magenta
+     36  cyan         46  on_cyan
+     37  white        47  on_white
+    ------------------------------------
+
+=for roff
+.. \" end hack
+
+=begin roff
+
+.in +4n
+.TS
+lb s s s
+n | l | n | l.
+_
+\0ANSI color names:
+_
+0	clear	\&	\&
+0	reset	\&	\&
+1	ansibold	22	noansibold
+3	italic	23	noitalic
+4	underscore	24	nounderscore
+5	blink	25	noblink
+7	inverse	27	noinverse
+8	concealed	28	noconcealed
+_
+\030	black	40	on_black
+\031	red	41	on_red
+\032	green	42	on_green
+\033	yellow	43	on_yellow
+\034	blue	44	on_blue
+\035	magenta	45	on_magenta
+\036	cyan	46	on_cyan
+\037	white	47	on_white
+_
+.TE
+.in -4n
+
+=end roff
+
+Additionally, the following names are understood
+(inherited from Term::Screen):
+
+=for roff
+.de Vp \" hack to hide ascii table from manpage
+
+     termcap names:
+    ---------------
+     normal
+     bold
+     underline
+     reverse
+    ---------------
+
+=for roff
+.. \" end hack
+
+=begin roff
+
+.in +4n
+.TS
+lb
+l.
+_
+\0termcap names:
+_
+\0normal
+\0bold
+\0underline
+\0reverse
+_
+.TE
+.in -4n
+
+=end roff
+
+These termcap names send termcap-based escapes, which are not
+considered 'colors' and can therefore not be turned off by
+colorizable().
+
+As of version 1.12, underline() is termcap-based instead of
+ANSI-based.
+
+=item I<color2esc($colorstring)>
+
+Creates a string containing the escape codes corresponding to the
+color names or numbers given.
+
+Examples:
+
+    $scr->color2esc('bold yellow');   # returns "\e[1;33m"
+    $scr->color2esc('yellow on red'); # returns "\e[33;41m"
+    $scr->color2esc('33;41');         # returns "\e[33;41m"
+
+Note that this method translates the termcap-names to their ANSI
+equivalents (that respect the colorizable() setting). This algorithm
+was chosen to prevent a huge performance penalty if termcap sequences
+had to be sent.
+
+=cut
+
+sub color2esc {
+    # return color sequence
+    my $this = ref $_[0] ? shift() : { is_colorizable => 1 };
+    my $color = shift;
+    return '' unless $this->{is_colorizable};
+    $color =~ s/on\s+/on_/go;
+    # replace Term::Screen colors by Term::ScreenColor equivalents
+    # because this is WAY faster
+    $color =~ s/\bbold\b/ansibold/go;
+    $color =~ s/\breverse\b/inverse/go;
+    $color =~ s/\bunderline\b/underscore/go;
+    return "\e[".join (';', map { $ATTRIBUTES{$_} } split(/\s+|;/, $color)).'m';
+}
+
+=item I<color($colorstring)>
+
+(Deprecated). Identical to putcolor($colorstring).
+
+=cut
+
+sub color {
+    # for backward compatibility
+    goto &putcolor;
+}
+
+=item I<putcolor($colorstring)>
+
+Prints the escape sequence corresponding to this color string,
+in other words: the escape sequence that color2esc() generates.
+
+=cut
+
+sub putcolor {
+    # print color sequence
+    my $this = ref $_[0] ? shift() : undef;
+    my $color = shift;
+    print color2esc($color);
+    return $this;
+}
+
+=item I<colored($colorstring, @>I<strings)>
+
+Returns a string containing a concatenation of the string parts,
+wrapped in ANSI color sequences, using the first argument as
+color specification.
+
+Example:
+
+   # the next two lines return "\e[36;1;44mSirius\e[0m"
+   $scr->colored('cyan bold on blue', 'Sirius');
+   $scr->colored('36;1;44', 'Sirius');
+
+=cut
+
+sub colored {
+    # return string wrapped in color sequence
+    my $this = ref $_[0] ? shift() : { is_colorizable => 1 };
+    my $color = shift;
+    # don't return "\e[0m" unless colorizable
+    return join('', @_) unless $this->{is_colorizable};
+    return join('', color2esc($color), @_, "\e[0m");
+}
+
+=item I<putcolored($colorstring, @>I<strings)>
+
+Identical to puts(), but wraps its arguments in ANSI color
+sequences first, using the first argument as color specification.
+
+Example:
+
+   # the next two lines print "\e[32;40mSirius\e[0m"
+   $scr->colored('green on black', 'Sirius');
+   $scr->colored('32;40', 'Sirius');
+
+=cut
+
+sub putcolored {
+    # print string wrapped in color sequence
+    my $this = ref $_[0] ? shift() : undef;
+    my $color = shift;
+    print colored($color, @_);
+    return $this;
+}
+
+##########################################################################
+# initialisation
+
+no strict;
+
+foreach (keys %ATTRIBUTES) {
+    eval qq(
+        sub $_ {
+            \$this = shift;
+            print "\e[$ATTRIBUTES{$_}m" if \$this->{is_colorizable};
+            return \$this;
+        }
+    );
+}
+
+# Add the values themselves as keys
+
+foreach (values %ATTRIBUTES) {
+    $ATTRIBUTES{$_} = $_;
+}
+
+1;
+
+##########################################################################
+# manpage transition
+
+=back
+
+=head1 FIXES TO Term::Screen
+
+As of version 1.11, Term::ScreenColor is bundled with some bugfixes,
+enhancements and convenience functions that should have gone in
+Term::Screen. They are therefore contained in a separate package
+Term::Screen::Fixes.
+
+=head1 PUBLIC INTERFACE
+
+Term::Screen::Fixes offers the following methods:
+
+=over
+
+=cut
+
+##########################################################################
 # Term::Screen::Fixes
-
-# A couple of things that should have been fixed in Term::Screen.
-# I requested the maintainer to incorporate these. Fix them here
-# until they are fixed there.
 
 package Term::Screen::Fixes;
 
 require Term::Screen;
 
-@ISA = qw(Term::Screen);
+use strict;
 
-=for Term::Screen
+our @ISA = qw(Term::Screen);
+
 =item new()
-Initialize the screen. Does not clear the screen, but does home the cursor.
+
+Creates a new object. Initializes a timeout property, used for keys
+that generate escape sequences.
 
 =cut
 
@@ -30,16 +411,19 @@ sub new
 
     my $classname = ref($prototype) || $prototype;
 
-    $this = Term::Screen::Fixes->SUPER::new();
+    my $this = Term::Screen::Fixes->SUPER::new();
     bless $this, $prototype;
     $this->{FN_TIMEOUT} = 0.4;  # timeout for FN keys, in seconds
     $this->get_more_fn_keys();  # define function key table from defaults
     return $this;
 }
 
-=for Term::Screen
-=item timeout($)
-Returns and/or sets the function key timeout.
+=item timeout()
+
+=item I<timeout($float)>
+
+Returns (if called with no arguments) or sets (if called with one float
+argument) the function key timeout.
 
 =cut
 
@@ -55,22 +439,38 @@ sub timeout
     return $self->{FN_TIMEOUT};
 }
 
-=for Term::Screen
 =item getch()
-Returns just a char in raw mode. Function keys are returned as their
-capability names, e.g. the up key would return "ku".  See the
-C<get_fn_keys> function for what a lot of the names are. This will wait
-for $this-E<gt>{FN_TIMEOUT} seconds for a next char if the first char(s)
-are part of a possible fn key string.  You can use perl's sysread() to
-go 'underneath' getch if you want. See the table in
-Term::Screen::get_fn_keys() for more information.
+
+This duplicates the functionality of Term::Screen::getch(), but makes
+the following improvements:
+
+=over 2
+
+=item *
+
+getc() was replaced by sysread(). Since getc() does internal buffering,
+it does not work well with select(). This led in certain cases to the
+application not receiving input as soon as it was available.
+
+=item *
+
+If the received characterZ<>(s) started off as a possible function
+key escape sequence, but turn out not to be one after all, then the
+keys are put back in the input buffer in the correct order.
+(Term::Screen::getch() put them back at the wrong end of the buffer).
+
+=item *
+
+If the first received characterZ<>(s) are part of a possible function
+key escape sequence, it will wait the I<timeout> number of seconds for
+a next character. This eliminates the need to press escape twice.
+
+=back
 
 =cut
 
-# This does not just include the timeout, but it also substitutes sysread
-# for getc.
-# It's a real shame this wasn't fixed in Term::Screen, as this is a real
-# problem and it requires us to duplicate the entire subroutine here.
+# Unfortunately, for our fixes and extensions, we need to
+# duplicate the entire subroutine here.
 
 sub getch
 {
@@ -110,7 +510,7 @@ sub getch
         if ($partial_fn_str)    # oops not a fn key
         {
             # buffer up the received chars
-            $this->{IN} = CORE::reverse($partial_fn_str) . $this->{IN};
+            $this->{IN} = $this->{IN} . CORE::reverse($partial_fn_str);
             $c = chop( $this->{IN} );
             $this->puts($c) if ( $this->{ECHO} && ( $c ne "\e" ) );
         }
@@ -121,9 +521,21 @@ sub getch
     return $c;
 }
 
-=for Term::Screen
+=item I<flash()>
+
+Sends the visual bell escape sequence to the terminal.
+
+=cut
+
+sub flash {
+    my $this = shift;
+    $this->term()->Tputs( '_vb', 1, *STDOUT );
+    return $this;
+}
+
 =item underline()
-The us value from termcap - turn on underline.
+
+Turns on underline using the B<us> value from termcap.
 
 =cut
 
@@ -134,35 +546,73 @@ sub underline
     return $this;
 }
 
-=for Term::Screen
+=item bold2esc()
+
+=item reverse2esc()
+
+=item underline2esc()
+
+=item normal2esc()
+
+Return the termcap definitions for bold, reverse, underline and
+normal.
+
+=cut
+
+sub bold2esc
+{
+    my $this = shift;
+    return $this->term()->{'_md'};
+}
+
+sub reverse2esc
+{
+    my $this = shift;
+    return $this->term()->{'_mr'};
+}
+
+sub underline2esc
+{
+    my $this = shift;
+    return $this->term()->{'_us'};
+}
+
+sub normal2esc
+{
+    my $this = shift;
+    return $this->term()->{'_me'};
+}
+
 =item raw()
+
 Sets raw input mode using stty(1).
 
 =cut
 
-sub raw {
+sub raw
+{
     my $this = shift;
-    # wrapped so inherited versions can call with different input codes
     eval { system qw(stty raw -echo) };
-    return $this->noecho();
+    return $this;
 }
 
-=for Term::Screen
 =item cooked()
+
 Sets cooked input mode using stty(1).
 
 =cut
 
-sub cooked {
+sub cooked
+{
     my $this = shift;
-    # wrapped so inherited versions can call with different input codes
     eval { system qw(stty -raw echo) };
-    return $this->echo();
+    return $this;
 }
 
-=for Term::Screen
 =item flush_input()
-Clears input buffer and removes any incoming chars.
+
+Duplicates the functionality of Term::Screen::flush_input(), but
+replaces getc() with sysread().
 
 =cut
 
@@ -175,9 +625,17 @@ sub flush_input
     return $this;
 }
 
-sub get_more_fn_keys {
+=item get_more_fn_keys()
+
+Adds more function key escape sequences.
+
+=cut
+
+sub get_more_fn_keys
+{
     my $this = shift;
     my $term = $this->term();
+    my ($fn, $count, %keys);
 
 #    $this->def_key( "ku", "\e[A" );   # vt100
 #    $this->def_key( "kd", "\e[B" );   # vt100
@@ -233,7 +691,7 @@ sub get_more_fn_keys {
 
     # try to get more useful things out of termcap
 
-    my %keys = (
+    %keys = (
         kI  => "ins",
         kD  => "del",
         kh  => "home",
@@ -245,7 +703,7 @@ sub get_more_fn_keys {
         F2  => "k12",
     );
 
-    my $count = 0;
+    $count = "0 but true";
     foreach $fn (keys %keys) {
         if (exists $term->{"_$fn"}) {
 #            print "Defining $keys{$fn} as $term->{\"_$fn\"}\n";
@@ -256,171 +714,10 @@ sub get_more_fn_keys {
     return $count;
 }
 
-########################################################################
-# Term::ScreenColor
-
-package Term::ScreenColor;
-
-@ISA = qw(Term::Screen::Fixes);
-$VERSION = '1.11';
-
-# Most methods end in "$_[0]" so you can string things together, e.g.
-# $scr->at(2,3)->cyan()->puts("hi");
-
-sub new {
-    my $this = shift;
-    my $classname = ref($this) || $this;
-    my $ob = Term::ScreenColor->SUPER::new();
-    # terminal types which support color (ugly solution, fix this)
-    $ob->{is_colorizable} = $ENV{'TERM'} =~ /(^linux$|color|ansi)/i;
-    return bless $ob, $classname;
-}
-
-sub color2esc {
-    # return color sequence
-    my $this = ref $_[0] ? shift() : { is_colorizable => 1 };
-    my $color = shift;
-    return '' unless $this->{is_colorizable};
-    $color =~ s/on\s+/on_/g;
-    $color =~ s/bold/ansibold/g;   # present in Term::Screen, not in %ATTRIBUTES
-    $color =~ s/reverse/inverse/g; # present in Term::Screen, not in %ATTRIBUTES
-    return "\e[".join (';', map { $ATTRIBUTES{$_} } split(/\s+|;/, $color)).'m';
-}
-
-sub color {
-    # must be compatible with previous versions.
-    goto &putcolor;
-}
-
-sub putcolor {
-    # print color sequence
-    my $this = ref $_[0] ? shift() : undef;
-    my $color = shift;
-#    print $this ? $this->color2esc($color) : &color2esc($color);
-    print color2esc($color);
-    return $this;
-}
-
-sub colored {
-    # return string wrapped in color sequence
-    my $this = ref $_[0] ? shift() : { is_colorizable => 1 };
-    my $color = shift;
-    return join('', @_) unless $this->{is_colorizable};
-    return join('', &color2esc($color), @_, "\e[0m");
-}
-
-sub putcolored {
-    # print string wrapped in color sequence
-    my $this = ref $_[0] ? shift() : undef;
-    my $color = shift;
-#    print $this ? $this->colored($color, @_) : &colored($color, @_);
-    print colored($color, @_);
-    return $this;
-}
-
-sub colorizable {
-    my ($this, $request) = (shift, shift);
-    if (defined($request)) {
-        $this->{is_colorizable} = $request;
-        return $this;
-    } else {
-        return $this->{is_colorizable};
-    }
-}
-
-# initialisation
-
-%ATTRIBUTES = (
-  'clear'      => 0,  'black'      => 30,  'on_black'   => 40,
-  'reset'      => 0,  'red'        => 31,  'on_red'     => 41,
-  'ansibold'   => 1,  'green'      => 32,  'on_green'   => 42,
-  'underline'  => 4,  'yellow'     => 33,  'on_yellow'  => 43,
-  'underscore' => 4,  'blue'       => 34,  'on_blue'    => 44,
-  'blink'      => 5,  'magenta'    => 35,  'on_magenta' => 45,
-  'inverse'    => 7,  'cyan'       => 36,  'on_cyan'    => 46,
-  'concealed'  => 8,  'white'      => 37,  'on_white'   => 47,
-);
-
-foreach (keys %ATTRIBUTES) {
-    eval qq(
-        sub $_ {
-            \$this = shift;
-            print "\e[$ATTRIBUTES{$_}m" if \$this->{is_colorizable};
-            return \$this;
-        }
-    );
-}
-
-# Add the values themselves as keys
-
-foreach (values %ATTRIBUTES) {
-    $ATTRIBUTES{$_} = $_;
-}
-
 1;
 
-=pod
-
-=head1 NAME
-
-Term::ScreenColor - Screen positioning and coloring module for Perl
-
-=head1 SYNOPSIS
-
-A Term::Screen based screen positioning module with ANSI
-color support.
-
-   use Term::ScreenColor;
-
-   $scr = new Term::ScreenColor;
-   $scr->at(2,0)->red()->on_yellow()->puts("Hello, Tau Ceti!");
-   $scr->putcolored('cyan bold on blue', 'Betelgeuse');
-   $scr->putcolored('1;36;44', 'Altair');
-   $scr->raw();
-
-=head1 DESCRIPTION
-
-Term::ScreenColor adds ANSI coloring support, along with a few other useful
-methods, to those provided in Term::Screen.
-
-=head1 PUBLIC INTERFACE
-
-In addition to the methods described in Term::Screen(3pm), Term::ScreenColor
-offers the following methods:
-
-=over
-
-=item color()
-
-Turn on a color by specifying its number in the table specified below:
-
-   clear       => 0    black       => 30    on_black    => 40
-   reset       => 0    red         => 31    on_red      => 41
-   ansibold    => 1    green       => 32    on_green    => 42
-   underline   => 4    yellow      => 33    on_yellow   => 43
-   underscore  => 4    blue        => 34    on_blue     => 44
-   blink       => 5    magenta     => 35    on_magenta  => 45
-   inverse     => 7    cyan        => 36    on_cyan     => 46
-   concealed   => 8    white       => 37    on_white    => 47
-
-=item black() I<etc.>
-
-Turn on a color by its name.
-
-=item colorizable()
-
-May be used to either set (if called with one integer argument) or query (if
-called with no arguments) whether the terminal is believed to support ANSI
-color codes. If this is set to off (0), no ANSI codes will be output. This
-provides an easy way for turning on/off color.
-
-=item putcolored()
-
-Identical to puts(), but wraps its arguments in ANSI color sequences first,
-using its first argument as color specification. Example:
-
-   $scr->putcolored('cyan bold on blue', 'Betelgeuse');
-   $scr->putcolored('1;36;44', 'Altair');
+##########################################################################
+# end of manpage
 
 =back
 
@@ -434,12 +731,12 @@ Term::ScreenColor was based on:
 
 =item Term::Screen
 
-Originally by Mark Kaehny (kaehny@execpc.com), now maintained by Jonathan
-Stowe (jns@gellyfish.com)
+Originally by Mark Kaehny (kaehny@execpc.com),
+now maintained by Jonathan Stowe (jns@gellyfish.co.uk).
 
 =item Term::ANSIColor
 
-By Russ Allbery (rra@cs.stanford.edu) and Zenin (zenin@best.com)
+By Russ Allbery (rra@cs.stanford.edu) and Zenin (zenin@best.com).
 
 =back
 

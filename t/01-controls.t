@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 use strict;
-use Test::More tests => 19;
+use Test::More tests => 20;
 
 # -------------- test inclusion --------------------
 
@@ -11,7 +11,9 @@ require_ok('Term::ScreenColor');
 
 # -------------- test instantiation ----------------
 
-my ($scr, $stdout);
+my ($scr);
+
+$ENV{TERM} = 'xterm';
 
 open NULL, ">/dev/null";
 
@@ -19,9 +21,12 @@ open NULL, ">/dev/null";
 {
 	local *STDOUT = *NULL;
 	$scr = new Term::ScreenColor();
+	system "stty cooked echo"; # nicer output on terminal
 }
 
-isa_ok($scr, "Term::ScreenColor" );
+isa_ok($scr, "Term::ScreenColor"  );
+isa_ok($scr, "Term::Screen::Fixes");
+isa_ok($scr, "Term::Screen"       );
 
 # -------------- test Term::Screen::Fixes ----------
 
@@ -38,27 +43,24 @@ $scr->stuff_input('a');
 ok($scr->flush_input()      , 'call flush_input()');
 $scr->stuff_input('b');
 ok($scr->getch() eq 'b'     , 'get simple character with getch()');
-$scr->stuff_input('[15~');
+$scr->stuff_input("\e[15~");
 ok($scr->getch() eq 'k5'    , 'get function key with getch()');
+
+$scr->flush_input();
+$scr->stuff_input("f\e\eg");
+$scr->getch(); # discard 'f'
+ok($scr->getch() eq "\e"    , 'get double escape with getch()');
+ok($scr->getch() eq "\e"    , 'get double escape with getch()');
+
+$scr->flush_input();
+$scr->stuff_input("a\e[15b");
+$scr->getch(); # discard 'a'
+ok($scr->getch() eq "\e"    , 'get partial function escape with getch()');
+ok($scr->getch() eq "["     , 'get partial function escape with getch()');
+ok($scr->getch() eq "1"     , 'get partial function escape with getch()');
+$scr->flush_input();
+
 $scr->echo();
 
-# intercept STDOUT as this interferes with test output
-{
-	local *STDOUT = *NULL;
-	ok($scr->underline()        , 'set underline mode');
-	ok($scr->reset()            , 'reset underline mode');
-}
-
-# -------------- test Term::ScreenColor ----------
-
-ok($scr->colorizable(1)     , 'call colorizable()');
-ok($scr->color2esc('green')     eq "\e[32m",
-	'fetch foreground color escape sequence');
-ok($scr->color2esc('on_yellow') eq "\e[43m",
-	'fetch background color escape sequence');
-ok($scr->colored('green on_yellow', 'mytext') eq "\e[32;43mmytext\e[0m",
-	'put color escapes around text');
-
 # ---------------------- end ----------------------
-
 
