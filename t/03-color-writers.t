@@ -27,14 +27,13 @@ sub produce_output {
 
 	$scr = new Term::ScreenColor();
 	$scr->cooked()->puts("\n"); # put newline after at(0,0)
-	$scr->flash() ->puts("\n");
+#	$scr->flash() ->puts("\n"); # not available on all systems
 
 	# add newlines after every escape because we will use the <FH>
 	# operator to read lines from the pipe
 	for my $colorizable (0..1) {
 		$scr->colorizable($colorizable);
 
-		$scr->normal()		->puts("\n");
 		$scr->bold()		->puts("\n");
 		$scr->underline()	->puts("\n");
 		$scr->reverse()		->puts("\n");
@@ -73,20 +72,25 @@ sub produce_output {
 		$scr->on_cyan()		->puts("\n");
 		$scr->on_white()	->puts("\n");
 	}
+	# require special treatment
+	$scr->colorizable(0);
+	$scr->normal()->puts("\n");
+	$scr->colorizable(1);
+	$scr->normal()->puts("\n");
+
 	$scr->cooked()->normal();
 }
 
 # ---------- parent process: verify result ---------
 
 sub test_output {
-	use Test::More tests => 70;
-	my ($i, @tests, @descriptions, @results);
+	use Test::More tests => 69;
+	my ($i, @tests, @descriptions, @results, $fetched);
 
 	@tests = (
 		"at(0,0)",                         "\e[1;1H",
-		"flash()",                         "\e[?5h\e[?5l",
+#		"flash()",                         "\e[?5h\e[?5l",
 
-		"normal()       (colorizable=no)", "\e[0m",
 		"bold()         (colorizable=no)", "\e[1m",
 		"underline()    (colorizable=no)", "\e[4m",
 		"reverse()      (colorizable=no)", "\e[7m",
@@ -125,7 +129,6 @@ sub test_output {
 		"on_cyan()      (colorizable=no)", "",
 		"on_white()     (colorizable=no)", "",
 
-		"normal()       (colorizable=yes)", "\e[0m",
 		"bold()         (colorizable=yes)", "\e[1m",
 		"underline()    (colorizable=yes)", "\e[4m",
 		"reverse()      (colorizable=yes)", "\e[7m",
@@ -172,6 +175,10 @@ sub test_output {
 	foreach my $i (0 .. $#descriptions) {
 		ok(<HANDLE> eq "$results[$i]\n", $descriptions[$i]);
 	}
+	$fetched = <HANDLE>;
+	ok($fetched eq "\e[0m\n" || $fetched eq "\e[m\n", "normal()       (colorizable=no)");
+	$fetched = <HANDLE>;
+	ok($fetched eq "\e[0m\n" || $fetched eq "\e[m\n", "normal()       (colorizable=yes)");
 }
 
 # ---------------------- end ----------------------

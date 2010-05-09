@@ -7,7 +7,7 @@ require Term::ScreenColor;
 
 # -------------- test instantiation ----------------
 
-my ($scr, @tests, @descriptions, @results, $i);
+my ($scr, @tests, @descriptions, @results, $i, $fetched);
 
 $ENV{TERM} = 'xterm';
 
@@ -68,7 +68,8 @@ ok($scr->colorizable(0), 'turn colorizable off');
 ok($scr->bold2esc()      eq "\e[1m", 'fetch bold         (colorizable=no)');
 ok($scr->underline2esc() eq "\e[4m", 'fetch underline    (colorizable=no)');
 ok($scr->reverse2esc()   eq "\e[7m", 'fetch reverse      (colorizable=no)');
-ok($scr->normal2esc()    eq "\e[0m", 'fetch normal       (colorizable=no)');
+$fetched = $scr->normal2esc();
+ok($fetched eq "\e[0m" || $fetched eq "\e[m", 'fetch normal       (colorizable=no)');
 
 foreach $i (0 .. $#descriptions) {
 	ok($scr->color2esc($descriptions[$i]) eq "",
@@ -80,7 +81,8 @@ ok($scr->colorizable(1), 'turn colorizable on');
 ok($scr->bold2esc()      eq "\e[1m", 'fetch bold         (colorizable=yes)');
 ok($scr->underline2esc() eq "\e[4m", 'fetch underline    (colorizable=yes)');
 ok($scr->reverse2esc()   eq "\e[7m", 'fetch reverse      (colorizable=yes)');
-ok($scr->normal2esc()    eq "\e[0m", 'fetch normal       (colorizable=yes)');
+$fetched = $scr->normal2esc();
+ok($fetched eq "\e[0m" || $fetched eq "\e[m", 'fetch normal       (colorizable=yes)');
 
 foreach $i (0 .. $#descriptions) {
 	ok($scr->color2esc($descriptions[$i]) eq $results[$i],

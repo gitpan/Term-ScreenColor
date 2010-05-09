@@ -1,3 +1,8 @@
+1.13a
+
+* Fixed tests: flash() is not available everywhere; normal()
+  may return \e[m instead of \e[0m.
+
 1.13
 
 * Fixed bug in Term::Screen where partial function key escape
