@@ -3,7 +3,7 @@
 ##########################################################################
 #
 # Name:         Term::ScreenColor
-# Version:      1.13
+# Version:      1.14
 # Author:       Rene Uittenbogaard
 # Date:         2010-04-29
 # Usage:        require Term::ScreenColor;
@@ -22,7 +22,7 @@ package Term::ScreenColor;
 use strict;
 
 our @ISA = qw(Term::Screen::Fixes);
-our $VERSION = '1.13';
+our $VERSION = '1.14';
 
 our %ATTRIBUTES = (
   'clear'      => 0,

@@ -2,9 +2,16 @@
 
 use strict;
 
-# ------------------- setup pipe -------------------
-
 my ($childpid);
+
+my %NORMALS = (
+	"\e[m\n"     => 1,
+	"\e[0m\n"    => 1,
+	"\e[m\cO\n"  => 1,
+	"\e[0m\cO\n" => 1,
+);
+
+# ------------------- setup pipe -------------------
 
 $childpid = open(HANDLE, "-|");
 
@@ -85,7 +92,7 @@ sub produce_output {
 
 sub test_output {
 	use Test::More tests => 69;
-	my ($i, @tests, @descriptions, @results, $fetched);
+	my ($i, @tests, @descriptions, @results, $normal);
 
 	@tests = (
 		"at(0,0)",                         "\e[1;1H",
@@ -175,10 +182,10 @@ sub test_output {
 	foreach my $i (0 .. $#descriptions) {
 		ok(<HANDLE> eq "$results[$i]\n", $descriptions[$i]);
 	}
-	$fetched = <HANDLE>;
-	ok($fetched eq "\e[0m\n" || $fetched eq "\e[m\n", "normal()       (colorizable=no)");
-	$fetched = <HANDLE>;
-	ok($fetched eq "\e[0m\n" || $fetched eq "\e[m\n", "normal()       (colorizable=yes)");
+	$normal = <HANDLE>;
+	ok($NORMALS{$normal}, "normal()       (colorizable=no)");
+	$normal = <HANDLE>;
+	ok($NORMALS{$normal}, "normal()       (colorizable=yes)");
 }
 
 # ---------------------- end ----------------------

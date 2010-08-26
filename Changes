@@ -1,3 +1,8 @@
+1.14
+
+* Fixed tests: normal() may also return \e[m\017
+* Fixed Makefile.PL: dependency on Term::Cap was missing
+
 1.13a
 
 * Fixed tests: flash() is not available everywhere; normal()
