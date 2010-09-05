@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 use strict;
-use Test::More tests => 82;
+use Test::More tests => 83;
 
 require Term::ScreenColor;
 
@@ -96,6 +96,8 @@ foreach $i (0 .. $#descriptions) {
 		"fetch $descriptions[$i] (colorizable=yes)");
 }
 
+ok($scr->color2esc('')               eq "", 
+	'fetch color combination for empty string');
 ok($scr->color2esc('bold yellow')    eq "\e[1;33m", 
 	'fetch color combination 1');
 ok($scr->color2esc('yellow on red')  eq "\e[33;41m",

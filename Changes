@@ -1,3 +1,16 @@
+1.16
+
+* Workaround for OpenSolaris 11 bug. It has no termcap database and
+  "infocmp -C" does not provide the properties 'normal', 'bold' and
+  'reverse' (even though "infocmp" does). Therefore, Term::Cap cannot
+  provide these properties.  In that case, fall back on terminfo and
+  cache the results.
+* Added flash2esc()
+
+1.15
+
+* Fixed bug: color2esc('') now returns empty string instead of \e[m
+
 1.14
 
 * Fixed tests: normal() may also return \e[m\017

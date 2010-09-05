@@ -3,9 +3,9 @@
 ##########################################################################
 #
 # Name:         Term::ScreenColor
-# Version:      1.14
+# Version:      1.16
 # Author:       Rene Uittenbogaard
-# Date:         2010-04-29
+# Date:         2010-09-05
 # Usage:        require Term::ScreenColor;
 # Requires:     Term::Screen
 # Description:  Screen positioning and output coloring module
@@ -22,7 +22,7 @@ package Term::ScreenColor;
 use strict;
 
 our @ISA = qw(Term::Screen::Fixes);
-our $VERSION = '1.14';
+our $VERSION = '1.16';
 
 our %ATTRIBUTES = (
   'clear'      => 0,
@@ -265,6 +265,7 @@ sub color2esc {
     my $this = ref $_[0] ? shift() : { is_colorizable => 1 };
     my $color = shift;
     return '' unless $this->{is_colorizable};
+    return '' if $color eq '';
     $color =~ s/on\s+/on_/go;
     # replace Term::Screen colors by Term::ScreenColor equivalents
     # because this is WAY faster
@@ -521,15 +522,42 @@ sub getch
     return $c;
 }
 
-=item I<flash()>
+=item normal()
 
-Sends the visual bell escape sequence to the terminal.
+Sends the escape sequence to turn off any highlightling (bold, reverse).
 
 =cut
 
-sub flash {
+sub normal 
+{
     my $this = shift;
-    $this->term()->Tputs( '_vb', 1, *STDOUT );
+    print $this->normal2esc();
+    return $this;
+}
+
+=item bold()        
+
+Sends the B<md> value from termcap, which usually turns on bold.
+
+=cut
+
+sub bold
+{
+    my $this = shift;
+    print $this->bold2esc();
+    return $this;
+}
+
+=item reverse()
+
+Sends the B<mr> value from termcap, which often turns on reverse text.
+
+=cut
+
+sub reverse
+{
+    my $this = shift;
+    print $this->reverse2esc();
     return $this;
 }
 
@@ -542,9 +570,23 @@ Turns on underline using the B<us> value from termcap.
 sub underline
 {
     my $this = shift;
-    $this->term()->Tputs( 'us', 1, *STDOUT );
+    print $this->underline2esc();
     return $this;
 }
+
+=item flash()
+
+Sends the visual bell escape sequence to the terminal.
+
+=cut
+
+sub flash {
+    my $this = shift;
+    print $this->flash2esc();
+    return $this;
+}
+
+=item normal2esc()
 
 =item bold2esc()
 
@@ -552,35 +594,96 @@ sub underline
 
 =item underline2esc()
 
-=item normal2esc()
+=item flash2esc()
 
-Return the termcap definitions for bold, reverse, underline and
-normal.
+Return the termcap definitions for normal, bold, reverse, underline and
+visual bell.
+
+It was attested that on OpenSolaris 11, Term::Cap cannot provide
+the properties B<normal>, B<bold>, and B<reverse> because there is
+no F<termcap> and C<infocmp -C> does not provide these properties
+(even though C<infocmp> does).  In that case, fall back on terminfo.
 
 =cut
+
+sub normal2esc
+{
+    my $this = shift;
+    my $prop = $this->{'_me'};
+    if (!defined $prop) {
+        $prop = $this->term()->{'_me'};
+        if (!defined $prop) {
+            # fallback on terminfo
+            eval { $prop = `tput sgr0` };
+        }
+    }
+    # cache it
+    $this->{'_me'} = $prop;
+    return $prop;
+}
 
 sub bold2esc
 {
     my $this = shift;
-    return $this->term()->{'_md'};
+    my $prop = $this->{'_md'};
+    if (!defined $prop) {
+        $prop = $this->term()->{'_md'};
+        if (!defined $prop) {
+            # fallback on terminfo
+            eval { $prop = `tput bold` };
+        }
+    }
+    # cache it
+    $this->{'_md'} = $prop;
+    return $prop;
 }
 
 sub reverse2esc
 {
     my $this = shift;
-    return $this->term()->{'_mr'};
+    my $prop = $this->{'_mr'};
+    if (!defined $prop) {
+        $prop = $this->term()->{'_mr'};
+        if (!defined $prop) {
+            # fallback on terminfo
+            eval { $prop = `tput rev` };
+        }
+    }
+    # cache it
+    $this->{'_mr'} = $prop;
+    return $prop;
 }
 
 sub underline2esc
 {
     my $this = shift;
-    return $this->term()->{'_us'};
+    my $prop = $this->{'_us'};
+    if (!defined $prop) {
+        $prop = $this->term()->{'_us'};
+        if (!defined $prop) {
+            # fallback on terminfo
+            eval { $prop = `tput smul` };
+        }
+    }
+    # cache it
+    $this->{'_us'} = $prop;
+    return $prop;
 }
 
-sub normal2esc
+sub flash2esc
 {
     my $this = shift;
-    return $this->term()->{'_me'};
+    my $prop = $this->{'_vb'};
+    if (!defined $prop) {
+        $prop = $this->term()->{'_vb'};
+        if (!defined $prop) {
+            # fallback on terminfo
+            eval { $prop = `tput flash` };
+        }
+    }
+    # cache it
+    $this->{'_vb'} = $prop;
+    return $prop;
 }
 
 =item raw()
