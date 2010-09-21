@@ -1,3 +1,10 @@
+1.17
+
+* Deprecated support for static calls to color(), putcolor(), colored()
+  and putcolored(). This was never correctly supported anyway, and this
+  fixes some bugs.
+* Added tests for color(), putcolor(), colored() and putcolored().
+
 1.16
 
 * Workaround for OpenSolaris 11 bug. It has no termcap database and

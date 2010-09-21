@@ -3,9 +3,9 @@
 ##########################################################################
 #
 # Name:         Term::ScreenColor
-# Version:      1.16
+# Version:      1.17
 # Author:       Rene Uittenbogaard
-# Date:         2010-09-05
+# Date:         2010-09-20
 # Usage:        require Term::ScreenColor;
 # Requires:     Term::Screen
 # Description:  Screen positioning and output coloring module
@@ -22,7 +22,7 @@ package Term::ScreenColor;
 use strict;
 
 our @ISA = qw(Term::Screen::Fixes);
-our $VERSION = '1.16';
+our $VERSION = '1.17';
 
 our %ATTRIBUTES = (
   'clear'      => 0,
@@ -83,7 +83,7 @@ Term::ScreenColor offers the following methods:
 
 =over
 
-=item new()
+=item I<new()>
 
 Creates a new Term::ScreenColor object. Note that the constructor
 of the inherited class Term::Screen homes the cursor and switches
@@ -92,7 +92,7 @@ the terminal to raw input mode.
 =cut
 
 sub new {
-    my $this = shift;
+    my ($this) = (@_);
     my $classname = ref($this) || $this;
     my $ob = Term::ScreenColor->SUPER::new();
     # terminal types which support color (ugly solution, fix this)
@@ -100,7 +100,7 @@ sub new {
     return bless $ob, $classname;
 }
 
-=item colorizable()
+=item I<colorizable()>
 
 =item I<colorizable($boolean)>
 
@@ -124,15 +124,15 @@ sub colorizable {
     }
 }
 
-=item black()
+=item I<black()>
 
-=item red()
+=item I<red()>
 
-=item on_white()
+=item I<on_white()>
 
-=item on_cyan()
+=item I<on_cyan()>
 
-=item inverse()
+=item I<inverse()>
 
 I<etc.>
 
@@ -262,8 +262,7 @@ had to be sent.
 
 sub color2esc {
     # return color sequence
-    my $this = ref $_[0] ? shift() : { is_colorizable => 1 };
-    my $color = shift;
+    my ($this, $color) = @_;
     return '' unless $this->{is_colorizable};
     return '' if $color eq '';
     $color =~ s/on\s+/on_/go;
@@ -295,9 +294,8 @@ in other words: the escape sequence that color2esc() generates.
 
 sub putcolor {
     # print color sequence
-    my $this = ref $_[0] ? shift() : undef;
-    my $color = shift;
-    print color2esc($color);
+    my ($this, $color) = @_;
+    print $this->color2esc($color);
     return $this;
 }
 
@@ -317,11 +315,10 @@ Example:
 
 sub colored {
     # return string wrapped in color sequence
-    my $this = ref $_[0] ? shift() : { is_colorizable => 1 };
-    my $color = shift;
+    my ($this, $color, @args) = @_;
     # don't return "\e[0m" unless colorizable
-    return join('', @_) unless $this->{is_colorizable};
-    return join('', color2esc($color), @_, "\e[0m");
+    return join('', @args) unless $this->{is_colorizable} and $color ne '';
+    return join('', $this->color2esc($color), @args, "\e[0m");
 }
 
 =item I<putcolored($colorstring, @>I<strings)>
@@ -339,9 +336,8 @@ Example:
 
 sub putcolored {
     # print string wrapped in color sequence
-    my $this = ref $_[0] ? shift() : undef;
-    my $color = shift;
-    print colored($color, @_);
+    my ($this, $color, @args) = @_;
+    print $this->colored($color, @args);
     return $this;
 }
 
@@ -353,7 +349,7 @@ no strict;
 foreach (keys %ATTRIBUTES) {
     eval qq(
         sub $_ {
-            \$this = shift;
+            my \$this = shift;
             print "\e[$ATTRIBUTES{$_}m" if \$this->{is_colorizable};
             return \$this;
         }
@@ -399,7 +395,7 @@ use strict;
 
 our @ISA = qw(Term::Screen);
 
-=item new()
+=item I<new()>
 
 Creates a new object. Initializes a timeout property, used for keys
 that generate escape sequences.
@@ -419,7 +415,7 @@ sub new
     return $this;
 }
 
-=item timeout()
+=item I<timeout()>
 
 =item I<timeout($float)>
 
@@ -440,7 +436,7 @@ sub timeout
     return $self->{FN_TIMEOUT};
 }
 
-=item getch()
+=item I<getch()>
 
 This duplicates the functionality of Term::Screen::getch(), but makes
 the following improvements:
@@ -522,20 +518,20 @@ sub getch
     return $c;
 }
 
-=item normal()
+=item I<normal()>
 
 Sends the escape sequence to turn off any highlightling (bold, reverse).
 
 =cut
 
-sub normal 
+sub normal
 {
     my $this = shift;
     print $this->normal2esc();
     return $this;
 }
 
-=item bold()        
+=item I<bold()>
 
 Sends the B<md> value from termcap, which usually turns on bold.
 
@@ -548,7 +544,7 @@ sub bold
     return $this;
 }
 
-=item reverse()
+=item I<reverse()>
 
 Sends the B<mr> value from termcap, which often turns on reverse text.
 
@@ -561,7 +557,7 @@ sub reverse
     return $this;
 }
 
-=item underline()
+=item I<underline()>
 
 Turns on underline using the B<us> value from termcap.
 
@@ -574,7 +570,7 @@ sub underline
     return $this;
 }
 
-=item flash()
+=item I<flash()>
 
 Sends the visual bell escape sequence to the terminal.
 
@@ -586,15 +582,15 @@ sub flash {
     return $this;
 }
 
-=item normal2esc()
+=item I<normal2esc()>
 
-=item bold2esc()
+=item I<bold2esc()>
 
-=item reverse2esc()
+=item I<reverse2esc()>
 
-=item underline2esc()
+=item I<underline2esc()>
 
-=item flash2esc()
+=item I<flash2esc()>
 
 Return the termcap definitions for normal, bold, reverse, underline and
 visual bell.
@@ -686,7 +682,7 @@ sub flash2esc
     return $prop;
 }
 
-=item raw()
+=item I<raw()>
 
 Sets raw input mode using stty(1).
 
@@ -699,7 +695,7 @@ sub raw
     return $this;
 }
 
-=item cooked()
+=item I<cooked()>
 
 Sets cooked input mode using stty(1).
 
@@ -712,7 +708,7 @@ sub cooked
     return $this;
 }
 
-=item flush_input()
+=item I<flush_input()>
 
 Duplicates the functionality of Term::Screen::flush_input(), but
 replaces getc() with sysread().
@@ -728,7 +724,7 @@ sub flush_input
     return $this;
 }
 
-=item get_more_fn_keys()
+=item I<get_more_fn_keys()>
 
 Adds more function key escape sequences.
 
