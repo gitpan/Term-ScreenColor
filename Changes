@@ -1,3 +1,7 @@
+1.18
+
+* Fixed test: on OpenBSD, normal() may return "\e(B\e[m"
+
 1.17
 
 * Deprecated support for static calls to color(), putcolor(), colored()

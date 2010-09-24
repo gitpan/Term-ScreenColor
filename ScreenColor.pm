@@ -3,9 +3,9 @@
 ##########################################################################
 #
 # Name:         Term::ScreenColor
-# Version:      1.17
+# Version:      1.18
 # Author:       Rene Uittenbogaard
-# Date:         2010-09-20
+# Date:         2010-09-25
 # Usage:        require Term::ScreenColor;
 # Requires:     Term::Screen
 # Description:  Screen positioning and output coloring module
@@ -22,7 +22,7 @@ package Term::ScreenColor;
 use strict;
 
 our @ISA = qw(Term::Screen::Fixes);
-our $VERSION = '1.17';
+our $VERSION = '1.18';
 
 our %ATTRIBUTES = (
   'clear'      => 0,

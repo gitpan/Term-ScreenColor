@@ -3,9 +3,9 @@
 ##########################################################################
 #
 # Name:         03-color-writers.t
-# Version:      1.17
+# Version:      1.18
 # Author:       Rene Uittenbogaard
-# Date:         2010-09-20
+# Date:         2010-09-25
 # Requires:     Term::ScreenColor
 # Description:  Tests for color printing methods in Term::ScreenColor
 #
@@ -18,10 +18,12 @@ use strict;
 my $teststring = 'zwerk';
 
 my %NORMALS = (
-	"\e[m\n"     => 1,
-	"\e[0m\n"    => 1,
-	"\e[m\cO\n"  => 1,
-	"\e[0m\cO\n" => 1,
+	"\e[m\n"      => 1,
+	"\e[0m\n"     => 1,
+	"\e[m\cO\n"   => 1,
+	"\e[0m\cO\n"  => 1,
+	"\e(B\e[m\n"  => 1,
+	"\e(B\e[0m\n" => 1,
 );
 
 ##########################################################################

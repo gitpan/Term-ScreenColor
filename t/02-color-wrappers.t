@@ -3,9 +3,9 @@
 ##########################################################################
 #
 # Name:         02-color-wrappers.t
-# Version:      1.17
+# Version:      1.18
 # Author:       Rene Uittenbogaard
-# Date:         2010-09-20
+# Date:         2010-09-25
 # Requires:     Term::ScreenColor
 # Description:  Tests for string wrapping methods in Term::ScreenColor
 #
@@ -21,10 +21,12 @@ require Term::ScreenColor;
 my $scr;
 
 my %NORMALS = (
-	"\e[m"     => 1,
-	"\e[0m"    => 1,
-	"\e[m\cO"  => 1,
-	"\e[0m\cO" => 1,
+	"\e[m"      => 1,
+	"\e[0m"     => 1,
+	"\e[m\cO"   => 1,
+	"\e[0m\cO"  => 1,
+	"\e(B\e[m"  => 1,
+	"\e(B\e[0m" => 1,
 );
 
 my @tests = (
