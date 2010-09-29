@@ -3,9 +3,9 @@
 ##########################################################################
 #
 # Name:         03-color-writers.t
-# Version:      1.18
+# Version:      1.19
 # Author:       Rene Uittenbogaard
-# Date:         2010-09-25
+# Date:         2010-09-29
 # Requires:     Term::ScreenColor
 # Description:  Tests for color printing methods in Term::ScreenColor
 #
@@ -24,6 +24,11 @@ my %NORMALS = (
 	"\e[0m\cO\n"  => 1,
 	"\e(B\e[m\n"  => 1,
 	"\e(B\e[0m\n" => 1,
+);
+
+my %FLASHES = (
+	"\e[?5h\e[?5l\n" => 1,
+	"\n"             => 1,
 );
 
 ##########################################################################
@@ -51,7 +56,6 @@ sub produce_output {
 
 	$scr = new Term::ScreenColor();
 	$scr->cooked()->puts("\n"); # put newline after at(0,0)
-#	$scr->flash() ->puts("\n"); # not available on all systems
 
 	# add newlines after every escape because we will use the <FH>
 	# operator to read lines from the pipe
@@ -61,7 +65,6 @@ sub produce_output {
 		$scr->bold()		->puts("\n");
 		$scr->underline()	->puts("\n");
 		$scr->reverse()		->puts("\n");
-		$scr->flash()		->puts("\n");
 
 		$scr->clear()		->puts("\n");
 		$scr->reset()		->puts("\n");
@@ -194,8 +197,10 @@ sub produce_output {
 	# require special treatment
 	$scr->colorizable(0);
 	$scr->normal()->puts("\n");
+	$scr->flash()->puts("\n");
 	$scr->colorizable(1);
 	$scr->normal()->puts("\n");
+	$scr->flash()->puts("\n");
 
 	$scr->cooked()->normal();
 }
@@ -205,15 +210,14 @@ sub produce_output {
 
 sub test_output {
 	use Test::More tests => 235;
-	my ($i, @tests, @descriptions, @results, $normal);
-
+	my ($i, @tests, @descriptions, @results, $seq);
+ 
 	@tests = (
 		"at(0,0)",                                   "\e[1;1H",
 
 		"bold()                     (colorizable=no)", "\e[1m",
 		"underline()                (colorizable=no)", "\e[4m",
 		"reverse()                  (colorizable=no)", "\e[7m",
-		"flash()                    (colorizable=no)", "\e[?5h\e[?5l",
 
 		"clear()                    (colorizable=no)", "",
 		"reset()                    (colorizable=no)", "",
@@ -346,7 +350,6 @@ sub test_output {
 		"bold()                     (colorizable=yes)", "\e[1m",
 		"underline()                (colorizable=yes)", "\e[4m",
 		"reverse()                  (colorizable=yes)", "\e[7m",
-		"flash()                    (colorizable=yes)", "\e[?5h\e[?5l",
 
 		"clear()                    (colorizable=yes)", "\e[0m",
 		"reset()                    (colorizable=yes)", "\e[0m",
@@ -483,10 +486,14 @@ sub test_output {
 	foreach my $i (0 .. $#descriptions) {
 		ok(<HANDLE> eq "$results[$i]\n", $descriptions[$i]);
 	}
-	$normal = <HANDLE>;
-	ok($NORMALS{$normal}, "normal()                   (colorizable=no)");
-	$normal = <HANDLE>;
-	ok($NORMALS{$normal}, "normal()                   (colorizable=yes)");
+	$seq = <HANDLE>;
+	ok($NORMALS{$seq}, "normal()                   (colorizable=no)");
+	$seq = <HANDLE>;
+	ok($FLASHES{$seq}, "flash()                    (colorizable=no)");
+	$seq = <HANDLE>;
+	ok($NORMALS{$seq}, "normal()                   (colorizable=yes)");
+	$seq = <HANDLE>;
+	ok($FLASHES{$seq}, "flash()                    (colorizable=yes)");
 }
 
 ##########################################################################

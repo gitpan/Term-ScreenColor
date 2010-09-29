@@ -3,9 +3,9 @@
 ##########################################################################
 #
 # Name:         02-color-wrappers.t
-# Version:      1.18
+# Version:      1.19
 # Author:       Rene Uittenbogaard
-# Date:         2010-09-25
+# Date:         2010-09-29
 # Requires:     Term::ScreenColor
 # Description:  Tests for string wrapping methods in Term::ScreenColor
 #
@@ -27,6 +27,11 @@ my %NORMALS = (
 	"\e[0m\cO"  => 1,
 	"\e(B\e[m"  => 1,
 	"\e(B\e[0m" => 1,
+);
+
+my %FLASHES = (
+	"\e[?5h\e[?5l" => 1,
+	""             => 1,
 );
 
 my @tests = (
@@ -111,7 +116,7 @@ sub main {
 			'fetch underline                         (colorizable=no)');
 	ok($scr->reverse2esc()   eq "\e[7m",
 			'fetch reverse                           (colorizable=no)');
-	ok($scr->flash2esc()     eq "\e[?5h\e[?5l",
+	ok($FLASHES{$scr->flash2esc()},
 			'fetch flash                             (colorizable=no)');
 	ok($NORMALS{$scr->normal2esc()},
 			'fetch normal                            (colorizable=no)');
@@ -136,7 +141,7 @@ sub main {
 			'fetch underline                         (colorizable=yes)');
 	ok($scr->reverse2esc()   eq "\e[7m",
 			'fetch reverse                           (colorizable=yes)');
-	ok($scr->flash2esc()     eq "\e[?5h\e[?5l",
+	ok($FLASHES{$scr->flash2esc()},
 			'fetch flash                             (colorizable=yes)');
 	ok($NORMALS{$scr->normal2esc()},
 			'fetch normal                            (colorizable=yes)');
