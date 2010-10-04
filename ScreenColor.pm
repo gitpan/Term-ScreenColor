@@ -3,9 +3,9 @@
 ##########################################################################
 #
 # Name:         Term::ScreenColor
-# Version:      1.19
+# Version:      1.20
 # Author:       Rene Uittenbogaard
-# Date:         2010-09-29
+# Date:         2010-10-04
 # Usage:        require Term::ScreenColor;
 # Requires:     Term::Screen
 # Description:  Screen positioning and output coloring module
@@ -21,10 +21,11 @@ package Term::ScreenColor;
 
 use strict;
 
-our @ISA = qw(Term::Screen::Fixes);
-our $VERSION = '1.19';
+our @ISA     = qw(Term::Screen::Fixes);
+our $VERSION = '1.20';
+our $AUTOLOAD;
 
-our %ATTRIBUTES = (
+our %ANSI_ATTRIBUTES = (
   'clear'      => 0,
   'reset'      => 0,
   'ansibold'   => 1,   'noansibold'   => 22,  # 1=on, 22=off
@@ -34,7 +35,7 @@ our %ATTRIBUTES = (
   'inverse'    => 7,   'noinverse'    => 27,
   'concealed'  => 8,   'noconcealed'  => 28,
 
-  'black'      => 30,  'on_black'     => 40,
+  'black'      => 30,  'on_black'     => 40,  # also 'on black' etc.
   'red'        => 31,  'on_red'       => 41,
   'green'      => 32,  'on_green'     => 42,
   'yellow'     => 33,  'on_yellow'    => 43,
@@ -92,12 +93,39 @@ the terminal to raw input mode.
 =cut
 
 sub new {
-    my ($this) = (@_);
+    my ($this) = @_;
     my $classname = ref($this) || $this;
     my $ob = Term::ScreenColor->SUPER::new();
-    # terminal types which support color (ugly solution, fix this)
-    $ob->{is_colorizable} = $ENV{'TERM'} =~ /(^linux$|color|ansi)/i;
-    return bless $ob, $classname;
+    # Set colorizability based on terminal names which
+    # we guess support color (ugly solution, fix this)
+    $ob->{_is_colorizable} = $ENV{'TERM'} =~ /(^linux$|color|ansi)/i;
+    bless $ob, $classname;
+    # Find all attributes: termcap
+    my %TERMCAP_ATTRIBUTES = (
+        normal    => $ob->normal2esc(),
+        bold      => $ob->bold2esc(),
+        underline => $ob->underline2esc(),
+       'reverse'  => $ob->reverse2esc(),
+    );
+    $ob->{_TERMCAP_ATTRIBUTES} = { %TERMCAP_ATTRIBUTES };
+    # Find all attributes: ANSI by name and number
+    $ob->{_ANSI_ATTRIBUTES}    = { %ANSI_ATTRIBUTES };
+    @{
+        $ob->{_ANSI_ATTRIBUTES}
+    }{
+        values %ANSI_ATTRIBUTES
+    } = (
+        values %ANSI_ATTRIBUTES
+    );
+    # replace termcap colors by ANSI equivalents
+    # this is WAY faster than using termcap values when colorizable is on.
+    @{
+        $ob->{_ANSI_ATTRIBUTES}
+    }{
+        qw(normal bold underline reverse)
+    } = @ANSI_ATTRIBUTES{qw(reset ansibold underscore inverse)};
+    # Return the new object
+    return $ob;
 }
 
 =item I<colorizable()>
@@ -110,17 +138,18 @@ color codes. If this is set to false, no ANSI codes will be printed
 or generated. This provides an easy way for turning color on/off.
 
 Note that the constructor above takes an initial guess at whether
-the terminal supports color (using the C<TERM> variable).
+the terminal supports color (based on the value of the C<TERM>
+environment variable).
 
 =cut
 
 sub colorizable {
     my ($this, $request) = (@_);
     if (defined($request)) {
-        $this->{is_colorizable} = $request;
+        $this->{_is_colorizable} = $request;
         return $this;
     } else {
-        return $this->{is_colorizable};
+        return $this->{_is_colorizable};
     }
 }
 
@@ -242,36 +271,80 @@ colorizable().
 As of version 1.12, underline() is termcap-based instead of
 ANSI-based.
 
+=cut
+
+sub AUTOLOAD {
+    my ($this) = @_;
+    my $color = $AUTOLOAD;
+    $color =~ s/.*:://;
+    return if $color eq 'DESTROY';
+    return $this->putcolor($color);
+}
+
 =item I<color2esc($colorstring)>
 
 Creates a string containing the escape codes corresponding to the
 color names or numbers given.
 
+If the terminal is considered to be I<colorizable>, This method will
+translate any termcap-names to their ANSI equivalents. This algorithm was
+chosen to improve performance.
+
 Examples:
 
+    $scr->colorizable(1);
     $scr->color2esc('bold yellow');   # returns "\e[1;33m"
+    $scr->color2esc('blue reverse');  # returns "\e[34;7m"
     $scr->color2esc('yellow on red'); # returns "\e[33;41m"
-    $scr->color2esc('33;41');         # returns "\e[33;41m"
+    $scr->color2esc('37;42');         # returns "\e[37;42m"
 
-Note that this method translates the termcap-names to their ANSI
-equivalents (that respect the colorizable() setting). This algorithm
-was chosen to prevent a huge performance penalty if termcap sequences
-had to be sent.
+If the terminal is not I<colorizable>, the ANSI names are discarded
+and only the termcap-names are respected. They will send the escape
+sequences as defined in the termcap database.
+
+Examples:
+
+    $scr->colorizable(0);
+    $scr->color2esc('bold yellow');
+    # returns 'md' from termcap, probably "\e[1m"
+    $scr->color2esc('blue reverse');
+    # returns 'mr' from termcap, probably "\e[7m"
+    $scr->color2esc('yellow on red');
+    # returns ""
 
 =cut
 
 sub color2esc {
     # return color sequence
     my ($this, $color) = @_;
-    return '' unless $this->{is_colorizable};
     return '' if $color eq '';
+    if ($this->{_is_colorizable}) {
+        return $this->_ansi2esc($color);
+    } else {
+        return $this->_termcap2esc($color);
+    }
+}
+
+sub _ansi2esc {
+    my ($this, $color) = @_;
     $color =~ s/on\s+/on_/go;
-    # replace Term::Screen colors by Term::ScreenColor equivalents
-    # because this is WAY faster
-    $color =~ s/\bbold\b/ansibold/go;
-    $color =~ s/\breverse\b/inverse/go;
-    $color =~ s/\bunderline\b/underscore/go;
-    return "\e[".join (';', map { $ATTRIBUTES{$_} } split(/\s+|;/, $color)).'m';
+    # translation has been done in the constructor
+    return "\e[" . join(
+        ';',
+        map { $this->{_ANSI_ATTRIBUTES}{$_} }
+            split(/(?:\s+|;)/o, $color)
+    ) . 'm';
+}
+
+sub _termcap2esc {
+    # return color sequence
+    my ($this, $color) = @_;
+    my @elements =
+        grep { defined }
+            map { $this->{_TERMCAP_ATTRIBUTES}{$_} }
+                split(/(?:\s+|;)/o, $color);
+    return '' unless @elements;
+    return join '', @elements;
 }
 
 =item I<color($colorstring)>
@@ -316,9 +389,10 @@ Example:
 sub colored {
     # return string wrapped in color sequence
     my ($this, $color, @args) = @_;
-    # don't return "\e[0m" unless colorizable
-    return join('', @args) unless $this->{is_colorizable} and $color ne '';
-    return join('', $this->color2esc($color), @args, "\e[0m");
+    return join('', @args) if $color eq '';
+    my $initstring = $this->color2esc($color);
+    return join('', @args) unless $initstring;
+    return join('', $initstring, @args, "\e[0m");
 }
 
 =item I<putcolored($colorstring, @>I<strings)>
@@ -342,25 +416,7 @@ sub putcolored {
 }
 
 ##########################################################################
-# initialisation
-
-no strict;
-
-foreach (keys %ATTRIBUTES) {
-    eval qq(
-        sub $_ {
-            my \$this = shift;
-            print "\e[$ATTRIBUTES{$_}m" if \$this->{is_colorizable};
-            return \$this;
-        }
-    );
-}
-
-# Add the values themselves as keys
-
-foreach (values %ATTRIBUTES) {
-    $ATTRIBUTES{$_} = $_;
-}
+# return true
 
 1;
 
@@ -812,6 +868,9 @@ sub get_more_fn_keys
     }
     return $count;
 }
+
+##########################################################################
+# return true
 
 1;
 

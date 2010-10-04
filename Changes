@@ -1,3 +1,12 @@
+1.20
+
+* Fixed: since normal(), bold(), underline() and reverse() are
+  considered to be 'termcap' sequences (as opposed to ANSI color
+  sequences) and are therefore immune to colorizability, so also
+  putcolor(), colored() and color2esc(), called with each of these
+  names, should make no difference for colorizability.
+* Restructured code.
+
 1.19
 
 * Fixed tests: flash() is not available everywhere
